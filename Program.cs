@@ -1,98 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
 using System.Management;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Data.SqlClient;
+
 
 namespace infoGrabber
 {
     class Program
     {
         static void Main(string[] args)
-        {
-            string serialNumber = string.Empty;
-            PCData d = new PCData();
-            MonitorData md = new MonitorData();
-
-          
-            //d.description = "PC";
-            System.Management.SelectQuery query = new System.Management.SelectQuery(@"Select * from Win32_ComputerSystem");
-
-            //initialize the searcher with the query it is supposed to execute
-            using (System.Management.ManagementObjectSearcher searcher1 = new System.Management.ManagementObjectSearcher(query))
-            {
-                //execute the query
-                foreach (System.Management.ManagementObject process in searcher1.Get())
-                {
-                    //print system info
-                    process.Get();
-
-                    d.vendorPC = "" + process["Manufacturer"];
-                    d.modelPC = "" + process["Model"];
-                }
-            }
-            //to start searching at Windows BIOS table for the device serial number
-            //shows the serial number of the PC
-            ManagementObjectSearcher MOS = new ManagementObjectSearcher("Select * From Win32_BIOS");
-
-            foreach (ManagementObject getserial in MOS.Get())
-            {
-                d.serialNumberPC = getserial["SerialNumber"].ToString();
-            }
-
-
-            //this queries the information of all available monitors
-            ManagementObjectSearcher searcher = new ManagementObjectSearcher(@"root\WMI", "SELECT * FROM WmiMonitorID");
-            foreach (ManagementObject obj in searcher.Get())
-            {
-                foreach (PropertyData p in obj.Properties)
-                {
-                    if (p.Value != null)
-                    {
-                        switch (p.Value.GetType().ToString())
-                        {
-                            case "System.UInt16[]":
-                                {
-                                    d.description = "Monitor";
-                                    switch (p.Name)
-                                    {
-                                        
-                                        case "ManufacturerName":
-                                            {
-                                                d.vendorM = getString((UInt16[])p.Value);
-                                                break;
-                                            }
-                                        case "SerialNumberID":
-                                            {
-                                                d.serialNumberM = getString((UInt16[])p.Value);
-                                                break;
-                                            }
-                                        case "UserFriendlyName":
-                                            {
-                                                d.modelM = getString((UInt16[])p.Value);
-                                                break;
-                                            }
-                                    }
-                                    break;
-                                }
-                        }
-                    }
-                }
-            }
-
-            d.systemName = System.Environment.MachineName;
-            //d.version = System.Environment.OSVersion.ToString();
-            d.version = GetOSFriendlyName();
-
-
-
-            d.show();
+        { 
+            //PC
+            setPCData().show();
+            //MONITOR
+            setMonitorData().show();            
         }
 
         public static string GetOSFriendlyName()
@@ -123,6 +46,93 @@ namespace infoGrabber
             return sb.ToString();
         }
 
+        private static MonitorData setMonitorData() {
+
+            MonitorData md = new MonitorData();
+
+            //this queries the information of all available monitors
+            ManagementObjectSearcher searcher = new ManagementObjectSearcher(@"root\WMI", "SELECT * FROM WmiMonitorID");
+            foreach (ManagementObject obj in searcher.Get())
+            {
+                foreach (PropertyData p in obj.Properties)
+                {
+                    if (p.Value != null)
+                    {
+                        switch (p.Value.GetType().ToString())
+                        {
+                            case "System.UInt16[]":
+                                {
+                                    //d.description = "Monitor";
+                                    switch (p.Name)
+                                    {
+
+                                        case "ManufacturerName":
+                                            {
+                                                md.vendorM = getString((UInt16[])p.Value);
+                                                break;
+                                            }
+                                        case "SerialNumberID":
+                                            {
+                                                md.serialNumberM = getString((UInt16[])p.Value);
+                                                break;
+                                            }
+                                        case "UserFriendlyName":
+                                            {
+                                                md.modelM = getString((UInt16[])p.Value);
+                                                break;
+                                            }
+                                    }
+                                    break;
+                                }
+                        }
+                    }
+                }
+            }
+
+            //add to database
+            Database d = new Database();
+            if (!d.verifyMonitor(md.serialNumberM))
+                d.insertMonitor(md);
+
+            return md;
+        }
+
+        private static PCData setPCData() {
+            PCData pd = new PCData();
+            System.Management.SelectQuery query = new System.Management.SelectQuery(@"Select * from Win32_ComputerSystem");
+
+            //initialize the searcher with the query it is supposed to execute
+            using (System.Management.ManagementObjectSearcher searcher1 = new System.Management.ManagementObjectSearcher(query))
+            {
+                //execute the query
+                foreach (System.Management.ManagementObject process in searcher1.Get())
+                {
+                    //print system info
+                    process.Get();
+
+                    pd.vendorPC = "" + process["Manufacturer"];
+                    pd.modelPC = "" + process["Model"];
+                }
+            }
+            //to start searching at Windows BIOS table for the device serial number
+            //shows the serial number of the PC
+            ManagementObjectSearcher MOS = new ManagementObjectSearcher("Select * From Win32_BIOS");
+
+            foreach (ManagementObject getserial in MOS.Get())
+            {
+                pd.serialNumberPC = getserial["SerialNumber"].ToString();
+            }
+
+            pd.systemName = System.Environment.MachineName;
+            pd.version = GetOSFriendlyName();
+            pd.domain = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName;
+            pd.assetName = pd.vendorPC + " " + pd.modelPC; 
+            Database d = new Database();
+            if (!d.verifyPC(pd.serialNumberPC))
+                d.insertPC(pd);
+            
+            return pd;
+        }
 
     }
     
