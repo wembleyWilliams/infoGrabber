@@ -6,14 +6,11 @@ namespace infoGrabber
     public class Database
     {
         SqlConnection sqlConnection;
-
-        
         public Database()
         {
             try
             {
-                //Dummy SQL
-                sqlConnection = new SqlConnection(@"Server=yourServer;Database=yourDatabase;Trusted_Connection=True;");
+                sqlConnection = new SqlConnection(System.Configuration.ConfigurationManager.ConnectionStrings["MyDBConnectionString"].ConnectionString);
                 sqlConnection.Open();
             }
             catch(SqlException e)
@@ -37,7 +34,11 @@ namespace infoGrabber
             }
             catch (SqlException e)
             {
-                Console.WriteLine("Sql error" + e.Message);
+                SqlCommand sqlCommand = new SqlCommand("INSERT INTO Monitor(monitorModel, monitorSerial, monitorVendor) " +
+                    "VALUES('" + "Generic Model" + "','" + "Generic Serial" + "','" + "Generic Vendor" + "')"
+                    , sqlConnection);
+                sqlCommand.ExecuteNonQuery();
+                Console.WriteLine("Sql error from insertPC method" + e.Message);
             }
             finally
             {
@@ -51,6 +52,7 @@ namespace infoGrabber
             try
             {
                 sqlConnection.Open();
+                
                 SqlCommand sqlCommand = new SqlCommand("INSERT INTO Monitor(monitorModel, monitorSerial, monitorVendor) " +
                     "VALUES('" + data.modelM + "','" + data.serialNumberM + "','" + data.vendorM + "')"
                     , sqlConnection);
@@ -58,7 +60,11 @@ namespace infoGrabber
             }
             catch (SqlException e)
             {
-                Console.WriteLine("Sql error" + e.Message);
+                SqlCommand sqlCommand = new SqlCommand("INSERT INTO Monitor(monitorModel, monitorSerial, monitorVendor) " +
+                    "VALUES('" + "Generic Model" + "','" + "Generic Serial" + "','" + "Generic Vendor" + "')"
+                    , sqlConnection);
+                sqlCommand.ExecuteNonQuery();
+                Console.WriteLine("Sql error from insertMonitor method" + e.Message);
             }
             finally
             {
