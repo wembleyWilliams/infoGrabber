@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Management;
-using System.Net;
-using System.Net.Sockets;
 using System.Text;
-using System.Windows;
-
 
 namespace infoGrabber
 {
@@ -40,98 +36,115 @@ namespace infoGrabber
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                Console.WriteLine(ex.Message); 
             }
 
             return sb.ToString();
         }
 
         private static MonitorData setMonitorData() {
-
             MonitorData md = new MonitorData();
-
-            //this queries the information of all available monitors
-            ManagementObjectSearcher searcher = new ManagementObjectSearcher(@"root\WMI", "SELECT * FROM WmiMonitorID");
-            foreach (ManagementObject obj in searcher.Get())
+            try
             {
-                foreach (PropertyData p in obj.Properties)
-                {
-                    if (p.Value != null)
-                    {
-                        switch (p.Value.GetType().ToString())
-                        {
-                            case "System.UInt16[]":
-                                {
-                                    //d.description = "Monitor";
-                                    switch (p.Name)
-                                    {
+               
 
-                                        case "ManufacturerName":
-                                            {
-                                                md.vendorM = getString((UInt16[])p.Value);
-                                                break;
-                                            }
-                                        case "SerialNumberID":
-                                            {
-                                                md.serialNumberM = getString((UInt16[])p.Value);
-                                                break;
-                                            }
-                                        case "UserFriendlyName":
-                                            {
-                                                md.modelM = getString((UInt16[])p.Value);
-                                                break;
-                                            }
+                //this queries the information of all available monitors
+                ManagementObjectSearcher searcher = new ManagementObjectSearcher(@"root\WMI", "SELECT * FROM WmiMonitorID");
+                foreach (ManagementObject obj in searcher.Get())
+                {
+                    foreach (PropertyData p in obj.Properties)
+                    {
+                        if (p.Value != null)
+                        {
+                            switch (p.Value.GetType().ToString())
+                            {
+                                case "System.UInt16[]":
+                                    {
+                                        //d.description = "Monitor";
+                                        switch (p.Name)
+                                        {
+
+                                            case "ManufacturerName":
+                                                {
+                                                    md.vendorM = getString((UInt16[])p.Value);
+                                                    break;
+                                                }
+                                            case "SerialNumberID":
+                                                {
+                                                    md.serialNumberM = getString((UInt16[])p.Value);
+                                                    break;
+                                                }
+                                            case "UserFriendlyName":
+                                                {
+                                                    md.modelM = getString((UInt16[])p.Value);
+                                                    break;
+                                                }
+                                        }
+                                        break;
                                     }
-                                    break;
-                                }
+                            }
                         }
                     }
                 }
+
+                //add to database
+                Database d = new Database();
+                if (!d.verifyMonitor(md.serialNumberM))
+                    d.insertMonitor(md);
             }
-
-            //add to database
-            Database d = new Database();
-            if (!d.verifyMonitor(md.serialNumberM))
-                d.insertMonitor(md);
-
+            catch(Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
             return md;
+
         }
 
         private static PCData setPCData() {
             PCData pd = new PCData();
-            System.Management.SelectQuery query = new System.Management.SelectQuery(@"Select * from Win32_ComputerSystem");
-
-            //initialize the searcher with the query it is supposed to execute
-            using (System.Management.ManagementObjectSearcher searcher1 = new System.Management.ManagementObjectSearcher(query))
+            try
             {
-                //execute the query
-                foreach (System.Management.ManagementObject process in searcher1.Get())
+                
+                System.Management.SelectQuery query = new System.Management.SelectQuery(@"Select * from Win32_ComputerSystem");
+
+                //initialize the searcher with the query it is supposed to execute
+                using (System.Management.ManagementObjectSearcher searcher1 = new System.Management.ManagementObjectSearcher(query))
                 {
-                    //print system info
-                    process.Get();
+                    //execute the query
+                    foreach (System.Management.ManagementObject process in searcher1.Get())
+                    {
+                        //print system info
+                        process.Get();
 
-                    pd.vendorPC = "" + process["Manufacturer"];
-                    pd.modelPC = "" + process["Model"];
+                        pd.vendorPC = "" + process["Manufacturer"];
+                        pd.modelPC = "" + process["Model"];
+                    }
                 }
-            }
-            //to start searching at Windows BIOS table for the device serial number
-            //shows the serial number of the PC
-            ManagementObjectSearcher MOS = new ManagementObjectSearcher("Select * From Win32_BIOS");
+                //to start searching at Windows BIOS table for the device serial number
+                //shows the serial number of the PC
+                ManagementObjectSearcher MOS = new ManagementObjectSearcher("Select * From Win32_BIOS");
 
-            foreach (ManagementObject getserial in MOS.Get())
+                foreach (ManagementObject getserial in MOS.Get())
+                {
+                    pd.serialNumberPC = getserial["SerialNumber"].ToString();
+                }
+
+                pd.systemName = System.Environment.MachineName;
+                pd.version = GetOSFriendlyName();
+                pd.domain = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName;
+                pd.assetName = pd.vendorPC + " " + pd.modelPC;
+
+                Database d = new Database();
+                if (!d.verifyPC(pd.serialNumberPC))
+                    d.insertPC(pd);
+            }
+            catch(Exception t)
             {
-                pd.serialNumberPC = getserial["SerialNumber"].ToString();
+                Console.WriteLine(t.Message);
             }
-
-            pd.systemName = System.Environment.MachineName;
-            pd.version = GetOSFriendlyName();
-            pd.domain = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName;
-            pd.assetName = pd.vendorPC + " " + pd.modelPC; 
-            Database d = new Database();
-            if (!d.verifyPC(pd.serialNumberPC))
-                d.insertPC(pd);
             
             return pd;
+
         }
 
     }

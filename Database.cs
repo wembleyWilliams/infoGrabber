@@ -1,24 +1,26 @@
 ﻿using System;
 using System.Data.SqlClient;
 
-
 namespace infoGrabber
 {
     public class Database
     {
         SqlConnection sqlConnection;
+
+        
         public Database()
         {
             try
             {
-                sqlConnection = new SqlConnection(@"Server=IOPAWSEYWEMBLEY;Database=itelAssets;Trusted_Connection=True;");
+                //Dummy SQL
+                sqlConnection = new SqlConnection(@"Server=yourServer;Database=yourDatabase;Trusted_Connection=True;");
                 sqlConnection.Open();
             }
             catch(SqlException e)
             {
                 Console.WriteLine("Sql error" + e.Message);
             }
-            //SqlDataAdapter sqlDataAdapter = new SqlDataAdapter("Select * from PC", sqlConnection);
+
                 
         }
 
@@ -104,7 +106,6 @@ namespace infoGrabber
 
             return false;
         }
-
   
     }
 }

@@ -12,6 +12,7 @@ namespace infoGrabber
         public string serialNumberPC { get; set; }
        
         public string version { get; set; }
+
         public string systemName { get; set; }
 
         public string assetName { get; set; }
