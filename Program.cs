@@ -86,8 +86,6 @@ namespace infoGrabber
                         }
                     }
                 }
-
-                //add to database
                 Database d = new Database();
                 if (!d.verifyMonitor(md.serialNumberM))
                     d.insertMonitor(md);
@@ -106,22 +104,16 @@ namespace infoGrabber
             {
                 
                 System.Management.SelectQuery query = new System.Management.SelectQuery(@"Select * from Win32_ComputerSystem");
-
-                //initialize the searcher with the query it is supposed to execute
                 using (System.Management.ManagementObjectSearcher searcher1 = new System.Management.ManagementObjectSearcher(query))
                 {
-                    //execute the query
                     foreach (System.Management.ManagementObject process in searcher1.Get())
                     {
-                        //print system info
                         process.Get();
 
                         pd.vendorPC = "" + process["Manufacturer"];
                         pd.modelPC = "" + process["Model"];
                     }
                 }
-                //to start searching at Windows BIOS table for the device serial number
-                //shows the serial number of the PC
                 ManagementObjectSearcher MOS = new ManagementObjectSearcher("Select * From Win32_BIOS");
 
                 foreach (ManagementObject getserial in MOS.Get())
